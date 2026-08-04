@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from typing import List
 
-from blogs_api.schemas import PostCreate, PostResponse
+from blogs_api.schemas import PostCreate, PostResponse, PostUpdate
 
 app = FastAPI(title="Blogs API")
 
@@ -12,6 +12,11 @@ app = FastAPI(title="Blogs API")
 # Temporary in-memory storage for blog posts
 fake_posts_db: List[PostResponse] = []
 
+def find_index(post_id: int):
+    for i, p in enumerate(fake_posts_db):
+        if p['id'] == post_id:
+            return i
+    return None
 
 @app.get("/")
 def read_root():
@@ -50,6 +55,29 @@ def read_post(post_id: int, q: str = None):
             return post
         
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
+
+@app.patch("/posts/{post_id}", response_model=PostResponse)
+def update_post(post_id: int, post: PostUpdate):
+    """Partially update a specific blog post by its ID."""
+    index = find_index(post_id)
+    if index is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
+    post_data = fake_posts_db[index]
+    update_data = post.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        post_data[key] = value
+    post_data["updated_at"] = datetime.now()
+    return post_data
+
+@app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(post_id: int):
+    """Delete a specific blog post by its ID."""
+    index = find_index(post_id)
+    if index is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
+    fake_posts_db.pop(index)
+    return {"message": f"Post with ID {post_id} deleted successfully"}
+
 
 def main():
     uvicorn.run("blogs_api.main:app", host="127.0.0.1", port=8000, reload=True)
