@@ -7,7 +7,6 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 class Settings(BaseSettings):
     database_url: str
-    debug: bool = True
     sql_echo: bool = False
     model_config = SettingsConfigDict(
         env_file=".env",

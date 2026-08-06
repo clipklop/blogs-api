@@ -12,19 +12,10 @@ from blogs_api.database import Base, get_db, engine
 
 app = FastAPI(title="Blogs API")
 
-
-# Temporary in-memory storage for blog posts
-# fake_posts_db: List[PostResponse] = []
-
-# Temporary for initial prototyping
+# Temporary for initial prototyping. In a production application, use Alembic for database migrations.
 Base.metadata.create_all(bind=engine)
-DbSession = Annotated[Session, Depends(get_db)]
 
-def find_index(post_id: int):
-    for i, p in enumerate(fake_posts_db):
-        if p['id'] == post_id:
-            return i
-    return None
+DbSession = Annotated[Session, Depends(get_db)]
 
 @app.get("/db-health")
 def read_db_health(db: Session = Depends(get_db)):
@@ -39,7 +30,6 @@ def read_db_health(db: Session = Depends(get_db)):
 @app.get("/posts/", response_model=List[PostResponse])
 def get_posts(db: DbSession):
     """Retrieve all blog posts."""
-    # return fake_posts_db
     return db.query(models.Post).all()
 
 @app.post("/posts/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
@@ -51,53 +41,37 @@ def create_post(post: PostCreate, db: DbSession):
     db.refresh(db_post)
     return db_post
 
-# def create_post(post: PostCreate):
-#     """Create a new blog post."""
-#     # In a real application, you would save this to a database
-#     new_id = len(fake_posts_db) + 1
-#     current_time = datetime.now()
-
-#     # Conver Pydantic data into a standard dictionary
-#     new_post = {
-#         "id": new_id,
-#         **post.model_dump(),
-#         "created_at": current_time,
-#         "updated_at": current_time,
-#     }
-    
-#     fake_posts_db.append(new_post)
-#     return new_post
-
 @app.get("/posts/{post_id}", response_model=PostResponse)
-def read_post(post_id: int, q: str = None):
+def read_post(post_id: int, db: DbSession, q: str | None = None):
     """Retrieve a specific blog post by its ID."""
-    # In a real application, you would fetch this from a database
-    for post in fake_posts_db:
-        if post["id"] == post_id:
-            return post
-        
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
+    post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
+    return post
 
 @app.patch("/posts/{post_id}", response_model=PostResponse)
-def update_post(post_id: int, post: PostUpdate):
+def update_post(post_id: int, post: PostUpdate, db: DbSession):
     """Partially update a specific blog post by its ID."""
-    index = find_index(post_id)
-    if index is None:
+    db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if not db_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
-    post_data = fake_posts_db[index]
+    # Ensure that only the fields provided in the request are updated
     update_data = post.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        post_data[key] = value
-    post_data["updated_at"] = datetime.now()
-    return post_data
+        # Update only the fields that are provided in the request
+        setattr(db_post, key, value)
+    db.commit()
+    db.refresh(db_post)
+    return db_post
 
 @app.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(post_id: int):
+def delete_post(post_id: int, db: DbSession):
     """Delete a specific blog post by its ID."""
-    index = find_index(post_id)
-    if index is None:
+    db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if not db_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
-    fake_posts_db.pop(index)
+    db.delete(db_post)
+    db.commit()
     return {"message": f"Post with ID {post_id} deleted successfully"}
 
 
