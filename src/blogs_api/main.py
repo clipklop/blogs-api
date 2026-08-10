@@ -28,14 +28,20 @@ def read_db_health(db: Session = Depends(get_db)):
 @app.get("/posts/", response_model=List[PostResponse])
 def get_posts(
     db: DbSession,
-    limit: int = 20,
-    offset: int = 0,    
+    limit: Annotated[int, Query(gt=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ):
     """Retrieve all blog posts."""
-    limit = min(limit, 100)  # Limit the maximum number of posts returned to 100
-    offset = max(offset, 0)  # Ensure offset is non-negative
-    
-    return db.query(models.Post).offset(offset).limit(limit).all()
+    return (
+        db.query(models.Post)
+        .order_by(
+            models.Post.created_at.desc(),
+            models.Post.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
 @app.post("/posts/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 def create_post(post: PostCreate, db: DbSession):
