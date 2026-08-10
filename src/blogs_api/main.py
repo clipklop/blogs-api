@@ -36,9 +36,16 @@ def read_db_health(db: Session = Depends(get_db)):
         return {"status": "unhealthy", "error": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR
 
 @app.get("/posts/", response_model=List[PostResponse])
-def get_posts(db: DbSession):
+def get_posts(
+    db: DbSession,
+    limit: int = 20,
+    offset: int = 0,    
+):
     """Retrieve all blog posts."""
-    return db.query(models.Post).all()
+    limit = min(limit, 100)  # Limit the maximum number of posts returned to 100
+    offset = max(offset, 0)  # Ensure offset is non-negative
+    
+    return db.query(models.Post).offset(offset).limit(limit).all()
 
 @app.post("/posts/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 def create_post(post: PostCreate, db: DbSession):
@@ -50,7 +57,10 @@ def create_post(post: PostCreate, db: DbSession):
     return db_post
 
 @app.get("/posts/{post_id}", response_model=PostResponse)
-def read_post(post_id: int, db: DbSession, q: str | None = None):
+def read_post(
+    post_id: int, 
+    db: DbSession,
+):
     """Retrieve a specific blog post by its ID."""
     post = db.query(models.Post).filter(models.Post.id == post_id).first()
     if not post:
