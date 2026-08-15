@@ -4,24 +4,13 @@ from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from blogs_api import models
 from blogs_api.schemas import PostCreate, PostResponse, PostUpdate
-from blogs_api.database import Base, get_db, engine, settings
+from blogs_api.database import get_db
 
 app = FastAPI(title="Blogs API")
-
-# Temporary for initial prototyping. In a production application, use Alembic for database migrations.
-try:
-    Base.metadata.create_all(bind=engine)
-except OperationalError:
-    raise RuntimeError(
-        "Database startup failed: PostgreSQL could not be reached "
-        f"(connection timeout: {settings.database_connect_timeout}s). "
-        "Make sure PostgreSQL is running and DATABASE_URL is correct."
-    ) from None
 
 DbSession = Annotated[Session, Depends(get_db)]
 

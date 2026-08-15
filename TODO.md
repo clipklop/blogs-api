@@ -2,7 +2,7 @@
 
 ## Phase 1 — Foundation
 
-- [ ] Add Alembic migrations and remove `Base.metadata.create_all()` from application startup.
+- [x] Add Alembic migrations and remove `Base.metadata.create_all()` from application startup.
 - [ ] Add pagination with `limit` and `offset` query parameters.
 - [ ] Add filtering by publication status.
 - [ ] Add title and content search.
