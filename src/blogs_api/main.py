@@ -1,14 +1,13 @@
 from typing import Annotated, List
-from datetime import datetime
 
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from fastapi import FastAPI, Depends, HTTPException, status
 
 from blogs_api import models
-from blogs_api.schemas import PostCreate, PostResponse, PostUpdate
 from blogs_api.database import get_db
+from blogs_api.schemas import PostCreate, PostResponse, PostUpdate
 
 app = FastAPI(title="Blogs API")
 
