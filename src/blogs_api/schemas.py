@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 
 # Schema for incoming requests
@@ -19,7 +19,7 @@ class PostUpdate(BaseModel):
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="The username of the user")
-    email: str = Field(..., max_length=100, description="The email of the user")
+    email: EmailStr = Field(..., max_length=100, description="The email of the user")
     password: str = Field(..., min_length=6, max_length=100, description="The password of the user")
     
 

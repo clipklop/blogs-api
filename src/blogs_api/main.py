@@ -7,7 +7,9 @@ from fastapi import FastAPI, Depends, HTTPException, status
 
 from blogs_api import models
 from blogs_api.database import get_db
-from blogs_api.schemas import PostCreate, PostResponse, PostUpdate
+from blogs_api.schemas import (
+    PostCreate, PostResponse, PostUpdate, UserCreate, UserResponse
+)
 
 app = FastAPI(title="Blogs API")
 
@@ -80,6 +82,14 @@ def delete_post(post_id: int, db: DbSession):
     db.commit()
     return {"message": f"Post with ID {post_id} deleted successfully"}
 
+@app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(user: UserCreate, db: DbSession):
+    db_user = models.User(**user.model_dump())
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return db_user
 
 def main():
     uvicorn.run("blogs_api.main:app", host="127.0.0.1", port=8000, reload=True)
