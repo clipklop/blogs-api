@@ -1,3 +1,4 @@
+import random
 from typing import Annotated, List
 
 import uvicorn
@@ -5,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, HTTPException, status
 
-from blogs_api import models
+from blogs_api import models, utils
 from blogs_api.database import get_db
 from blogs_api.schemas import (
     PostCreate, PostResponse, PostUpdate, UserCreate, UserResponse
@@ -90,6 +91,7 @@ def delete_post(post_id: int, db: DbSession):
 
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: DbSession):
+    user.password = utils.hash_password(user.password)
     db_user = models.User(**user.model_dump())
     db.add(db_user)
     db.commit()
