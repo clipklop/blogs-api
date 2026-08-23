@@ -12,10 +12,12 @@ from blogs_api.schemas import (
 
 DbSession = Annotated[Session, Depends(get_db)]
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/users",
+)
 
 
-@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: DbSession):
     user.password = utils.hash_password(user.password)
     db_user = models.User(**user.model_dump())
@@ -32,7 +34,7 @@ def create_user(user: UserCreate, db: DbSession):
 
     return db_user
 
-@router.get("/users/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: int, db: DbSession):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
