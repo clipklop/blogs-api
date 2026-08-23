@@ -26,7 +26,7 @@ services:
       # Optional: Mounts your local source folder so code changes reload instantly
       - ./src/blogs_api:/code/blogs_api    
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
