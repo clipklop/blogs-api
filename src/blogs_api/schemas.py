@@ -20,7 +20,7 @@ class PostUpdate(BaseModel):
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="The username of the user")
     email: EmailStr = Field(..., max_length=100, description="The email of the user")
-    password: str = Field(..., min_length=6, max_length=100, description="The password of the user")
+    password: str = Field(..., min_length=6, max_length=71, description="The password of the user")
     
 
 # Schema for outgoing responses
@@ -31,9 +31,10 @@ class PostResponse(PostCreate):
     created_at: datetime
     updated_at: datetime
 
-class UserResponse(UserCreate):
+class UserResponse(BaseModel): 
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    email: EmailStr
     created_at: datetime
     updated_at: datetime

@@ -11,7 +11,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U blogs -d blogs"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,10 +22,14 @@ services:
     container_name: fastapi_app
     ports:
       - "8000:8000"
+    volumes:
+      # Optional: Mounts your local source folder so code changes reload instantly
+      - ./src/blogs_api:/code/blogs_api    
     environment:
       - DATABASE_URL=${DATABASE_URL}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: always
 
 volumes:

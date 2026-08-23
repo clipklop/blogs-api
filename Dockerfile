@@ -20,7 +20,7 @@ WORKDIR /code
 COPY --from=builder /app/.venv /code/.venv
 
 # Copy your source code
-COPY ./blogs_api /code/blogs_api
+COPY ./src/blogs_api /code/blogs_api
 
 # Prepend the virtual environment binaries to the system PATH
 ENV PATH="/code/.venv/bin:$PATH"
