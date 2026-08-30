@@ -11,11 +11,13 @@ from blogs_api.database import get_db
 from blogs_api.routers import (
     post,
     user,
+    auth,
 )
 
 app = FastAPI(title="Blogs API")
 
 DbSession = Annotated[Session, Depends(get_db)]
+
 
 @app.get("/")
 def read_db_health(db: Session = Depends(get_db)):
@@ -29,6 +31,7 @@ def read_db_health(db: Session = Depends(get_db)):
 
 app.include_router(post.router)
 app.include_router(user.router)
+app.include_router(auth.router)
 
 
 def main():
