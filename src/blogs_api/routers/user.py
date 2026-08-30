@@ -14,6 +14,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 router = APIRouter(
     prefix="/users",
+    tags=["Users"],
 )
 
 

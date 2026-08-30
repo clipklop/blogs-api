@@ -13,6 +13,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 router = APIRouter(
     prefix="/posts",
+    tags=["Posts"]
 )
 
 

@@ -38,3 +38,9 @@ class UserResponse(BaseModel):
     email: EmailStr
     created_at: datetime
     updated_at: datetime
+
+
+# Schema for authentication
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
