@@ -8,6 +8,7 @@ from blogs_api.database import get_db
 from blogs_api.schemas import (
     PostCreate, PostResponse, PostUpdate
 )
+from blogs_api.oauth2 import get_current_user
 
 DbSession = Annotated[Session, Depends(get_db)]
 
@@ -36,7 +37,7 @@ def get_posts(
     )
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
-def create_post(post: PostCreate, db: DbSession):
+def create_post(post: PostCreate, db: DbSession, user_id: str = Depends(get_current_user)):
     """Create a new blog post."""
     db_post = models.Post(**post.model_dump())
     db.add(db_post)
@@ -56,7 +57,7 @@ def read_post(
     return post
 
 @router.patch("/{post_id}", response_model=PostResponse)
-def update_post(post_id: int, post: PostUpdate, db: DbSession):
+def update_post(post_id: int, post: PostUpdate, db: DbSession, user_id: str = Depends(get_current_user)):
     """Partially update a specific blog post by its ID."""
     db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
     if not db_post:
@@ -71,7 +72,7 @@ def update_post(post_id: int, post: PostUpdate, db: DbSession):
     return db_post
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(post_id: int, db: DbSession):
+def delete_post(post_id: int, db: DbSession, user_id: str = Depends(get_current_user)):
     """Delete a specific blog post by its ID."""
     db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
     if not db_post:
