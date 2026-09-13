@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Integer, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Integer, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from blogs_api.database import Base
@@ -14,6 +14,7 @@ class Post(Base):
     content: Mapped[str] = mapped_column(Text, nullable=True)
     published: Mapped[bool] = mapped_column(default=False)
     rating: Mapped[float] = mapped_column(default=0.0)
+    owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(),
