@@ -10,6 +10,7 @@ class PostCreate(BaseModel):
     content: str = Field(..., max_length=1000, description="The content of the blog post")
     published: bool = Field(False, description="Whether the blog post is published")
     rating: float = Field(0.0, ge=0.0, le=5.0, description="The rating of the blog post")
+    owner_id: int = Field(..., description="The ID of the user who owns the blog post")
 
 class PostUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=2, max_length=100, description="The title of the blog post")
