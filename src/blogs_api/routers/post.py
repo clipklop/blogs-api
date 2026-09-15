@@ -7,11 +7,11 @@ from blogs_api import models
 from blogs_api.database import get_db
 from blogs_api.oauth2 import get_current_user
 from blogs_api.schemas import (
-    PostCreate, PostResponse, PostUpdate
+    PostCreate, PostResponse, PostUpdate, TokenData
 )
 
 DbSession = Annotated[Session, Depends(get_db)]
-CurrentUser = Annotated[models.User, Depends(get_current_user)]
+CurrentUser = Annotated[TokenData, Depends(get_current_user)]
 
 router = APIRouter(
     prefix="/posts",
@@ -44,7 +44,6 @@ def create_post(
     current_user: CurrentUser,
 ):
     """Create a new blog post."""
-    print(current_user)
     db_post = models.Post(owner_id=current_user.id, **post.model_dump())
     db.add(db_post)
     db.commit()

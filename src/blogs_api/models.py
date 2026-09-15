@@ -14,7 +14,12 @@ class Post(Base):
     content: Mapped[str] = mapped_column(Text, nullable=True)
     published: Mapped[bool] = mapped_column(default=False)
     rating: Mapped[float] = mapped_column(default=0.0)
-    owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # Nullable only for posts created before ownership was introduced.
+    owner_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(),
