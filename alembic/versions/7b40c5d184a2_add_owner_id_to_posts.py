@@ -18,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Existing posts predate authentication, so their owner remains unknown.
-    op.add_column("posts", sa.Column("owner_id", sa.Integer(), nullable=True))
+    op.add_column("posts", sa.Column("owner_id", sa.Integer(), nullable=False))
     op.create_foreign_key(
         "fk_posts_owner_id_users",
         "posts",
