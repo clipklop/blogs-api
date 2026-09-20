@@ -14,12 +14,12 @@ class Post(Base):
     content: Mapped[str] = mapped_column(Text, nullable=True)
     published: Mapped[bool] = mapped_column(default=False)
     rating: Mapped[float] = mapped_column(default=0.0)
-    owner_id: Mapped[int] = mapped_column(
+    owner_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
-    owner: Mapped["User"] = relationship("User", back_populates="posts")
+    owner: Mapped[User | None] = relationship("User", back_populates="posts")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(),
@@ -38,6 +38,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
+    posts: Mapped[list["Post"]] = relationship("Post", back_populates="owner", passive_deletes=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

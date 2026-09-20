@@ -28,8 +28,8 @@ class PostResponse(PostCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    owner_id: int
-    owner: UserResponse
+    owner_id: int | None
+    owner: UserResponse | None
     created_at: datetime
     updated_at: datetime
 
