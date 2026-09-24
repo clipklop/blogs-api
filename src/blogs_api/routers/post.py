@@ -1,7 +1,7 @@
 from typing import Annotated, List
 
 from sqlalchemy.orm import Session
-from fastapi import FastAPI, Response, HTTPException, status, Depends, APIRouter, Query
+from fastapi import HTTPException, status, Depends, APIRouter, Query
 
 from blogs_api import models
 from blogs_api.database import get_db
@@ -24,10 +24,12 @@ def get_posts(
     db: DbSession,
     limit: Annotated[int, Query(gt=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
+    search: Annotated[str | None, Query(min_length=1)] = None
 ):
     """Retrieve all blog posts."""
     return (
         db.query(models.Post)
+        .filter(models.Post.title.contains(search))
         .order_by(
             models.Post.created_at.desc(),
             models.Post.id.desc(),
