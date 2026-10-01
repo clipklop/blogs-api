@@ -49,6 +49,7 @@ def create_post(post: PostCreate, db: DbSession, user_id: str = Depends(get_curr
 def read_post(
     post_id: int, 
     db: DbSession,
+    user_id: str = Depends(get_current_user),
 ):
     """Retrieve a specific blog post by its ID."""
     post = db.query(models.Post).filter(models.Post.id == post_id).first()
