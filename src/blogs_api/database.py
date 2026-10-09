@@ -6,20 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+from blogs_api.config import settings
 
-class Settings(BaseSettings):
-    database_url: str
-    sql_echo: bool = False
-    database_connect_timeout: int = Field(default=5, ge=1)
-    database_pool_timeout: int = Field(default=5, ge=1)
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        # env_prefix="BLOGS_",
-        extra="ignore",
-    )
-
-settings = Settings()
 
 database_url = make_url(settings.database_url)
 postgresql_engine_options = {}
