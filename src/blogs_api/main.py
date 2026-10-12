@@ -12,6 +12,7 @@ from blogs_api.routers import (
     post,
     user,
     auth,
+    vote,
 )
 
 app = FastAPI(title="Blogs API")
@@ -32,7 +33,7 @@ def read_db_health(db: Session = Depends(get_db)):
 app.include_router(post.router)
 app.include_router(user.router)
 app.include_router(auth.router)
-
+app.include_router(vote.router)
 
 def main():
     uvicorn.run("blogs_api.main:app", host="127.0.0.1", port=8000, reload=True)

@@ -1,5 +1,6 @@
 from typing import Annotated, List
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status, Depends, APIRouter, Query
 
@@ -7,7 +8,7 @@ from blogs_api import models
 from blogs_api.database import get_db
 from blogs_api.oauth2 import get_current_user
 from blogs_api.schemas import (
-    PostCreate, PostResponse, PostUpdate, TokenData
+    PostCreate, PostResponse, PostUpdate, TokenData, PostWithVotes
 )
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -19,25 +20,21 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[PostResponse])
+@router.get("/", response_model=List[PostWithVotes])
 def get_posts(
     db: DbSession,
     limit: Annotated[int, Query(gt=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     search: Annotated[str | None, Query(min_length=1)] = None
 ):
-    """Retrieve all blog posts."""
-    return (
-        db.query(models.Post)
-        .filter(models.Post.title.contains(search))
-        .order_by(
-            models.Post.created_at.desc(),
-            models.Post.id.desc(),
-        )
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    """Retrieve all blog posts with vote counts."""
+    post_votes = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+        models.Vote, models.Vote.post_id == models.Post.id, isouter=True
+    ).group_by(models.Post.id).filter(models.Post.title.contains(search)).order_by(
+        models.Post.created_at.desc(),
+        models.Post.id.desc(),
+    ).offset(offset).limit(limit).all()
+    return post_votes
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 def create_post(
@@ -52,14 +49,16 @@ def create_post(
     db.refresh(db_post)
     return db_post
 
-@router.get("/{post_id}", response_model=PostResponse)
+@router.get("/{post_id}", response_model=PostWithVotes)
 def read_post(
     post_id: int, 
     db: DbSession,
     user_id: str = Depends(get_current_user),
 ):
-    """Retrieve a specific blog post by its ID."""
-    post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    """Retrieve a specific blog post with vote by its ID."""
+    post = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+            models.Vote, models.Vote.post_id == models.Post.id, isouter=True
+        ).filter(models.Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
     return post
