@@ -6,6 +6,7 @@ from fastapi import status, Depends
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from blogs_api.database import get_db
 from blogs_api.routers import (
@@ -16,6 +17,15 @@ from blogs_api.routers import (
 )
 
 app = FastAPI(title="Blogs API")
+
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DbSession = Annotated[Session, Depends(get_db)]
 
