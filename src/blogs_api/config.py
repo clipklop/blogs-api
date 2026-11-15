@@ -1,5 +1,5 @@
-from pydantic import BaseSettings, Field
-from pydantic_settings import SettingsConfigDict
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str

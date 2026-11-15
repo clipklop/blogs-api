@@ -11,7 +11,8 @@ class Post(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=True)
+    slug: Mapped[str] = mapped_column(String(160), unique=True, index=True, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
     published: Mapped[bool] = mapped_column(default=False)
     rating: Mapped[float] = mapped_column(default=0.0)
     owner_id: Mapped[int | None] = mapped_column(

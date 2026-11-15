@@ -3,15 +3,15 @@
 ## Phase 1 — Foundation
 
 - [x] Add Alembic migrations and remove `Base.metadata.create_all()` from application startup.
-- [ ] Add pagination with `limit` and `offset` query parameters.
-- [ ] Add filtering by publication status.
-- [ ] Add title and content search.
-- [ ] Add sorting, including newest and oldest posts.
-- [ ] Add unique, indexed post slugs and a public slug-based lookup endpoint.
-- [ ] Make SQLAlchemy model nullability consistent with the Pydantic schemas.
-- [ ] Return an empty response body from successful `204 No Content` endpoints.
-- [ ] Validate PATCH requests so empty updates and invalid `null` values are rejected.
-- [ ] Add tests for CRUD operations, validation, missing posts, pagination, and filtering.
+- [x] Add pagination with `limit` and `offset` query parameters.
+- [x] Add filtering by publication status.
+- [x] Add title and content search.
+- [x] Add sorting, including newest and oldest posts.
+- [x] Add unique, indexed post slugs and a public slug-based lookup endpoint.
+- [x] Make SQLAlchemy model nullability consistent with the Pydantic schemas.
+- [x] Return an empty response body from successful `204 No Content` endpoints.
+- [x] Validate PATCH requests so empty updates and invalid `null` values are rejected.
+- [x] Add tests for CRUD operations, validation, missing posts, pagination, and filtering.
 
 Acceptance criteria: database changes are migration-driven, list endpoints are bounded and searchable, API schemas match stored data, and core post behavior has automated test coverage.
 

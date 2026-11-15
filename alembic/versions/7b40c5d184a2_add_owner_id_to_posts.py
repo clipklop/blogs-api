@@ -18,17 +18,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Existing posts predate authentication, so their owner remains unknown.
-    op.add_column("posts", sa.Column("owner_id", sa.Integer(), nullable=False))
-    op.create_foreign_key(
-        "fk_posts_owner_id_users",
-        "posts",
-        "users",
-        ["owner_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
+    with op.batch_alter_table("posts") as batch:
+        batch.add_column(sa.Column("owner_id", sa.Integer(), nullable=True))
+        batch.create_foreign_key(
+            "fk_posts_owner_id_users",
+            "users",
+            ["owner_id"],
+            ["id"],
+            ondelete="CASCADE",
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_posts_owner_id_users", "posts", type_="foreignkey")
-    op.drop_column("posts", "owner_id")
+    with op.batch_alter_table("posts") as batch:
+        batch.drop_constraint("fk_posts_owner_id_users", type_="foreignkey")
+        batch.drop_column("owner_id")

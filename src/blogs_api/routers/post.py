@@ -1,102 +1,104 @@
-from typing import Annotated, List
+from typing import Annotated, Literal
 
-from sqlalchemy import func
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status, Depends, APIRouter, Query
 
 from blogs_api import models
 from blogs_api.database import get_db
 from blogs_api.oauth2 import get_current_user
-from blogs_api.schemas import (
-    PostCreate, PostResponse, PostUpdate, TokenData, PostWithVotes
-)
+from blogs_api.schemas import PostCreate, PostResponse, PostUpdate, PostWithVotes, TokenData
+from blogs_api.slugs import make_slug
 
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[TokenData, Depends(get_current_user)]
-
-router = APIRouter(
-    prefix="/posts",
-    tags=["Posts"]
-)
+router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
-@router.get("/", response_model=List[PostWithVotes])
+def posts_with_votes(db: Session):
+    vote_counts = db.query(
+        models.Vote.post_id.label("post_id"),
+        func.count().label("votes"),
+    ).group_by(models.Vote.post_id).subquery()
+    return db.query(models.Post, func.coalesce(vote_counts.c.votes, 0)).outerjoin(
+        vote_counts, vote_counts.c.post_id == models.Post.id
+    )
+
+
+def post_response(row) -> PostWithVotes:
+    post, votes = row
+    return PostWithVotes(**PostResponse.model_validate(post).model_dump(), votes=votes)
+
+
+def owned_post(post_id: int, db: Session, user: TokenData) -> models.Post:
+    post = db.get(models.Post, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail=f"Post with ID {post_id} not found")
+    if post.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this post")
+    return post
+
+
+@router.get("/", response_model=list[PostWithVotes])
 def get_posts(
     db: DbSession,
-    limit: Annotated[int, Query(gt=1, le=100)] = 20,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
-    search: Annotated[str | None, Query(min_length=1)] = None
+    published: bool | None = None,
+    search: Annotated[str | None, Query(min_length=1, max_length=1000)] = None,
+    sort: Literal["newest", "oldest"] = "newest",
 ):
-    """Retrieve all blog posts with vote counts."""
-    post_votes = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
-        models.Vote, models.Vote.post_id == models.Post.id, isouter=True
-    ).group_by(models.Post.id).filter(models.Post.title.contains(search)).order_by(
-        models.Post.created_at.desc(),
-        models.Post.id.desc(),
-    ).offset(offset).limit(limit).all()
-    return post_votes
+    query = posts_with_votes(db)
+    if published is not None:
+        query = query.filter(models.Post.published == published)
+    if search is not None:
+        query = query.filter(or_(
+            models.Post.title.icontains(search, autoescape=True),
+            models.Post.content.icontains(search, autoescape=True),
+        ))
+    order = (models.Post.created_at.asc(), models.Post.id.asc()) if sort == "oldest" else (
+        models.Post.created_at.desc(), models.Post.id.desc()
+    )
+    return [post_response(row) for row in query.order_by(*order).offset(offset).limit(limit).all()]
+
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
-def create_post(
-    post: PostCreate, 
-    db: DbSession,
-    current_user: CurrentUser,
-):
-    """Create a new blog post."""
-    db_post = models.Post(owner_id=current_user.id, **post.model_dump())
+def create_post(post: PostCreate, db: DbSession, current_user: CurrentUser):
+    db_post = models.Post(owner_id=current_user.id, slug=make_slug(post.title), **post.model_dump())
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
     return db_post
 
+
+@router.get("/slug/{slug}", response_model=PostWithVotes)
+def read_post_by_slug(slug: str, db: DbSession):
+    row = posts_with_votes(db).filter(models.Post.slug == slug).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return post_response(row)
+
+
 @router.get("/{post_id}", response_model=PostWithVotes)
-def read_post(
-    post_id: int, 
-    db: DbSession,
-    user_id: str = Depends(get_current_user),
-):
-    """Retrieve a specific blog post with vote by its ID."""
-    post = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
-            models.Vote, models.Vote.post_id == models.Post.id, isouter=True
-        ).filter(models.Post.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
-    return post
+def read_post(post_id: int, db: DbSession, current_user: CurrentUser):
+    row = posts_with_votes(db).filter(models.Post.id == post_id).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Post with ID {post_id} not found")
+    return post_response(row)
+
 
 @router.patch("/{post_id}", response_model=PostResponse)
-def update_post(
-    post_id: int, 
-    post: PostUpdate, 
-    db: DbSession,
-    current_user: CurrentUser
-):
-    """Partially update a specific blog post by its ID."""
-    db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
-    if not db_post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
-    if db_post.owner_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this post")
-    # Ensure that only the fields provided in the request are updated
-    update_data = post.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        # Update only the fields that are provided in the request
+def update_post(post_id: int, post: PostUpdate, db: DbSession, current_user: CurrentUser):
+    db_post = owned_post(post_id, db, current_user)
+    for key, value in post.model_dump(exclude_unset=True).items():
         setattr(db_post, key, value)
     db.commit()
     db.refresh(db_post)
     return db_post
 
-@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(
-    post_id: int, 
-    db: DbSession,
-    current_user: CurrentUser
-):
-    """Delete a specific blog post by its ID."""
-    db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
-    if not db_post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ID {post_id} not found")
-    if db_post.owner_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this post")
-    db.delete(db_post)
+
+@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+def delete_post(post_id: int, db: DbSession, current_user: CurrentUser):
+    db.delete(owned_post(post_id, db, current_user))
     db.commit()
-    return {"message": f"Post with ID {post_id} deleted successfully"}
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

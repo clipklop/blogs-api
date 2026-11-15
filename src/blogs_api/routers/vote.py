@@ -17,13 +17,13 @@ router = APIRouter(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def vote(
     vote: VotePost, 
-    db: Session = Depends(get_db), 
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
 ):
     """Cast a vote for a post."""
     post = db.query(models.Post).filter(models.Post.id == vote.post_id).first()
     if not post:
-        raise HTTPException(status_code=status,HTTP_404_NOT_FOUND, detail=f"Post with id {vote.post_id} doesn't exist")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {vote.post_id} doesn't exist")
     
     vote_query = db.query(models.Vote).filter(
         models.Vote.post_id == vote.post_id, models.Vote.user_id == current_user.id
@@ -31,12 +31,12 @@ def vote(
     found_vote = vote_query.first()
     
     if (vote.dir == 1):
-       if found_vote:
+        if found_vote:
            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"user {current_user.id} has already voted on post {vote.post_id}")
         new_vote = models.Vote(post_id=vote.post_id, user_id=current_user.id)
-       db.add(new_vote)
-       db.commit()
-       return {"message": "successfully added vote"}
+        db.add(new_vote)
+        db.commit()
+        return {"message": "successfully added vote"}
     else:
         if not found_vote:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vote doesn't exist.")
