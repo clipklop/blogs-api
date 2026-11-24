@@ -1,4 +1,4 @@
-from blogs_api import models, utils
+from blogs_api import models, utils, schemas
 
 def test_read_db_health(client):
     response = client.get("/")

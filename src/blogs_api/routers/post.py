@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 from blogs_api import models
 from blogs_api.database import get_db
 from blogs_api.oauth2 import get_current_user
-from blogs_api.schemas import PostCreate, PostResponse, PostUpdate, PostWithVotes, TokenData
+from blogs_api.schemas import PostCreate, PostResponse, PostUpdate, PostWithVotes
 from blogs_api.slugs import make_slug
 
 DbSession = Annotated[Session, Depends(get_db)]
-CurrentUser = Annotated[TokenData, Depends(get_current_user)]
+CurrentUser = Annotated[models.User, Depends(get_current_user)]
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
@@ -30,7 +30,7 @@ def post_response(row) -> PostWithVotes:
     return PostWithVotes(**PostResponse.model_validate(post).model_dump(), votes=votes)
 
 
-def owned_post(post_id: int, db: Session, user: TokenData) -> models.Post:
+def owned_post(post_id: int, db: Session, user: models.User) -> models.Post:
     post = db.get(models.Post, post_id)
     if post is None:
         raise HTTPException(status_code=404, detail=f"Post with ID {post_id} not found")

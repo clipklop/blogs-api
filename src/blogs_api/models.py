@@ -15,12 +15,12 @@ class Post(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     published: Mapped[bool] = mapped_column(default=False)
     rating: Mapped[float] = mapped_column(default=0.0)
-    owner_id: Mapped[int | None] = mapped_column(
+    owner_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True,
+        nullable=False,
     )
-    owner: Mapped[User | None] = relationship("User", back_populates="posts")
+    owner: Mapped[User] = relationship("User", back_populates="posts")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(),

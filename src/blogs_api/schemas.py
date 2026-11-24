@@ -31,6 +31,12 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="The username of the user")
     email: EmailStr = Field(..., max_length=100, description="The email of the user")
     password: str = Field(..., min_length=6, max_length=71, description="The password of the user")
+
+    @model_validator(mode="after")
+    def validate_password_bytes(self):
+        if len(self.password.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 UTF-8 bytes")
+        return self
     
 
 # Schema for outgoing responses
@@ -39,8 +45,8 @@ class PostResponse(PostCreate):
 
     id: int
     slug: str
-    owner_id: int | None
-    owner: UserResponse | None
+    owner_id: int
+    owner: UserResponse
     created_at: datetime
     updated_at: datetime
 

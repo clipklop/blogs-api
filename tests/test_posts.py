@@ -151,5 +151,5 @@ def test_database_constraints_match_schema(engine):
     columns = {column["name"]: column for column in inspector.get_columns("posts")}
     for field in ["title", "content", "published", "rating", "slug", "created_at", "updated_at"]:
         assert columns[field]["nullable"] is False
-    assert columns["owner_id"]["nullable"] is True
+    assert columns["owner_id"]["nullable"] is False
     assert any(index["unique"] and index["column_names"] == ["slug"] for index in inspector.get_indexes("posts"))
