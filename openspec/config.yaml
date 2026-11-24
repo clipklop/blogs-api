@@ -14,29 +14,39 @@ rules:
   proposal:
     - Keep changes independently reviewable and link roadmap requirement IDs.
     - List exact new or modified capability paths and mark breaking API changes.
-    - Record dependencies and draft readiness; do not present proposed behavior as implemented.
+    - Record dependencies and draft readiness; do not present proposed behavior
+      as implemented.
   specs:
     - Use SHALL or MUST, named requirements, and WHEN/THEN scenarios.
     - Preserve full requirement blocks under MODIFIED Requirements.
-    - Cover authentication, ownership, visibility, validation, and failure behavior.
+    - Cover authentication, ownership, visibility, validation, and failure
+      behavior.
   design:
     - Reuse existing routers, synchronous sessions, and migration history.
-    - Resolve blocking API, permission, migration, and concurrency decisions before tasks.
+    - Resolve blocking API, permission, migration, and concurrency decisions
+      before tasks.
     - Keep dependency choices and implementation details out of behavioral specs.
   tasks:
-    - Create tasks only after blocking decisions and concrete contracts are resolved.
+    - Create tasks only after blocking decisions and concrete contracts are
+      resolved.
     - Map verification tasks to scenarios and keep incomplete work unchecked.
-    - Include relevant migration, regression, documentation, and PR validation tasks.
+    - Include relevant migration, regression, documentation, and PR validation
+      tasks.
 
 operations:
   apply:
     guidance:
-      - Read AGENTS.md and CONTRIBUTING.md and work on a dedicated branch, never main.
-      - Do not implement draft changes or changes without completed contracts and tasks.
+      - Read AGENTS.md and CONTRIBUTING.md and work on a dedicated branch, never
+        main.
+      - Do not implement draft changes or changes without completed contracts
+        and tasks.
       - Update and commit changed specifications before the corresponding code.
       - Run relevant checks before marking tasks complete.
   archive:
     guidance:
-      - Verify implementation against scenarios and inspect delta synchronization.
+      - Verify implementation against scenarios and inspect delta
+        synchronization.
       - Do not archive draft proposals or incomplete work as shipped.
-      - Include synchronized capability specs and archive in the delivery PR to main.
+      - Include synchronized capability specs and archive in the delivery PR to
+        main.
+skillsScope: project
