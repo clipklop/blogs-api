@@ -23,10 +23,11 @@ This repository uses OpenSpec's `spec-driven` schema. Read
 | Persistence | BASE-01 | [spec](specs/persistence/spec.md) |
 | Posts | BASE-02 | [spec](specs/posts/spec.md) |
 | Users and authentication | BASE-03 | [spec](specs/user-auth/spec.md) |
-| Voting | Existing voting baseline | [spec](specs/voting/spec.md) |
+| Publishing | CONTENT-01 | [spec](specs/publishing/spec.md) |
+| Voting | Existing voting baseline and CONTENT-01 visibility | [spec](specs/voting/spec.md) |
 
-These specs record current behavior, including public unpublished-post visibility.
-Planned restrictions belong in changes, not the implemented capability inventory.
+Public post discovery and voting require published content. Authors can read their own
+private posts. See the [publishing archive](changes/archive/2026-11-25-add-publishing-workflow/proposal.md) for the implementation change.
 Known vote-removal and concurrent-creation gaps are recorded explicitly.
 
 ## Draft change inventory
@@ -39,7 +40,6 @@ smaller independently reviewable changes during refinement.
 
 | Phase | Requirement ID | Change |
 | --- | --- | --- |
-| 3 | CONTENT-01 | [Publishing workflow](changes/add-publishing-workflow/proposal.md) |
 | 3 | CONTENT-02 | [Post tags](changes/add-post-tags/proposal.md) |
 | 3 | CONTENT-03 | [Post comments](changes/add-post-comments/proposal.md) |
 | 3 | CONTENT-04 | [Voting correctness](changes/complete-voting/proposal.md) |
@@ -108,5 +108,4 @@ when needed, and tasks; verify before archive. Enable the optional verification
 workflow through OpenSpec profiles if it is not installed. CLI validation checks
 document structure, not authorization correctness or code/spec agreement.
 
-`changes/archive/` is initially empty and contains only a Git placeholder.
 Do not archive the migrated drafts to make them appear shipped.

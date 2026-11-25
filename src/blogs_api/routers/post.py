@@ -1,17 +1,21 @@
+from datetime import datetime, timezone
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from blogs_api import models
 from blogs_api.database import get_db
-from blogs_api.oauth2 import get_current_user
-from blogs_api.schemas import PostCreate, PostResponse, PostUpdate, PostWithVotes
+from blogs_api.oauth2 import get_current_user, optional_oauth2_scheme, resolve_post_reader
+from blogs_api.post_access import lock_post, published_posts, readable_posts
+from blogs_api.schemas import PostCreate, PostPublication, PostResponse, PostState, PostUpdate, PostWithVotes
 from blogs_api.slugs import make_slug
 
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[models.User, Depends(get_current_user)]
+OptionalBearer = Annotated[str | None, Depends(optional_oauth2_scheme)]
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
@@ -31,26 +35,44 @@ def post_response(row) -> PostWithVotes:
 
 
 def owned_post(post_id: int, db: Session, user: models.User) -> models.Post:
-    post = db.get(models.Post, post_id)
-    if post is None:
+    post = lock_post(db, post_id)
+    if post is None or (post.state != "published" and post.owner_id != user.id):
         raise HTTPException(status_code=404, detail=f"Post with ID {post_id} not found")
     if post.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to modify this post")
     return post
 
 
-@router.get("/", response_model=list[PostWithVotes])
+@router.get("/", response_model=list[PostWithVotes], openapi_extra={"security": [{}]})
 def get_posts(
     db: DbSession,
+    request: Request,
+    token: OptionalBearer,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
-    published: bool | None = None,
+    scope: Annotated[Literal["public", "mine"], Query(description="Use a bearer token for mine")] = "public",
+    state: PostState | None = None,
     search: Annotated[str | None, Query(min_length=1, max_length=1000)] = None,
     sort: Literal["newest", "oldest"] = "newest",
 ):
     query = posts_with_votes(db)
-    if published is not None:
-        query = query.filter(models.Post.published == published)
+    if "published" in request.query_params:
+        raise RequestValidationError([{
+            "type": "extra_forbidden", "loc": ("query", "published"),
+            "msg": "Use the state filter instead of published", "input": request.query_params["published"],
+        }])
+    if scope == "mine":
+        user = resolve_post_reader(request, db, token, required=True)
+        query = query.filter(models.Post.owner_id == user.id)
+    else:
+        if state not in (None, "published"):
+            raise RequestValidationError([{
+                "type": "value_error", "loc": ("query", "state"),
+                "msg": "Private states require scope=mine", "input": state,
+            }])
+        query = query.filter(published_posts())
+    if state is not None:
+        query = query.filter(models.Post.state == state)
     if search is not None:
         query = query.filter(or_(
             models.Post.title.icontains(search, autoescape=True),
@@ -71,9 +93,10 @@ def create_post(post: PostCreate, db: DbSession, current_user: CurrentUser):
     return db_post
 
 
-@router.get("/slug/{slug}", response_model=PostWithVotes)
-def read_post_by_slug(slug: str, db: DbSession):
-    row = posts_with_votes(db).filter(models.Post.slug == slug).first()
+@router.get("/slug/{slug}", response_model=PostWithVotes, openapi_extra={"security": [{}]})
+def read_post_by_slug(slug: str, db: DbSession, request: Request, token: OptionalBearer):
+    user = resolve_post_reader(request, db, token)
+    row = posts_with_votes(db).filter(models.Post.slug == slug, readable_posts(user.id if user else None)).first()
     if row is None:
         raise HTTPException(status_code=404, detail="Post not found")
     return post_response(row)
@@ -81,7 +104,7 @@ def read_post_by_slug(slug: str, db: DbSession):
 
 @router.get("/{post_id}", response_model=PostWithVotes)
 def read_post(post_id: int, db: DbSession, current_user: CurrentUser):
-    row = posts_with_votes(db).filter(models.Post.id == post_id).first()
+    row = posts_with_votes(db).filter(models.Post.id == post_id, readable_posts(current_user.id)).first()
     if row is None:
         raise HTTPException(status_code=404, detail=f"Post with ID {post_id} not found")
     return post_response(row)
@@ -95,6 +118,25 @@ def update_post(post_id: int, post: PostUpdate, db: DbSession, current_user: Cur
     db.commit()
     db.refresh(db_post)
     return db_post
+
+
+@router.put("/{post_id}/publication", response_model=PostResponse)
+def set_publication(post_id: int, publication: PostPublication, db: DbSession, current_user: CurrentUser):
+    post = owned_post(post_id, db, current_user)
+    if post.state == publication.state:
+        return post
+    if post.state == "archived" and publication.state == "published":
+        raise HTTPException(status_code=409, detail="Restore archived posts to draft before publishing")
+    post.state = publication.state
+    now = datetime.now(timezone.utc)
+    post.updated_at = now
+    if post.state == "published" and post.published_at is None:
+        post.published_at = now
+    db.flush()
+    db.refresh(post)
+    result = PostResponse.model_validate(post)
+    db.commit()
+    return result
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)

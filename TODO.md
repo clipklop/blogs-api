@@ -33,15 +33,17 @@ Acceptance criteria: authenticated users can manage their own posts, while unaut
 
 ## Phase 3 — Content Features
 
-- [ ] Restrict draft visibility across list, numeric ID, and slug endpoints; public readers see only published posts, and authors can explicitly list their own drafts.
-- [ ] Replace the `published` boolean with `draft`, `published`, and `archived` states; migrate existing values and update filtering, response schemas, and API documentation together.
-- [ ] Define allowed publishing transitions: authors may publish, unpublish, archive, and restore their own posts; archived posts remain private to their author.
-- [ ] Add `published_at`; backfill existing published posts from `created_at`, set it on first publication, and preserve it across later edits and republication.
+- [x] Restrict draft visibility across list, numeric ID, and slug endpoints; public readers see only published posts, and authors can explicitly list their own drafts.
+- [x] Replace the `published` boolean with `draft`, `published`, and `archived` states; migrate existing values and update filtering, response schemas, and API documentation together.
+- [x] Define allowed publishing transitions: authors may publish, unpublish, archive, and restore their own posts; archived posts remain private to their author.
+- [x] Add `published_at`; backfill existing published posts from `created_at`, set it on first publication, and preserve it across later edits and republication.
 - [ ] Add tags with unique normalized names and a many-to-many relationship to posts; prevent duplicate assignments and support filtering by tag and author.
 - [ ] Add authenticated comments on published posts with paginated listing; allow commenters to edit or delete their own comments and post authors to delete comments on their posts.
-- [ ] Enforce post visibility when reading comments or voting so those endpoints cannot expose or interact with private posts.
+- [x] Restrict voting to published posts, including when the caller owns the draft or archive.
+- [ ] Enforce parent-post visibility when reading or writing comments.
 - [ ] Complete voting behavior: commit vote removals, remove the client-supplied `user_id`, and handle concurrent duplicate votes without an unhandled database error.
-- [ ] Add integration tests for publishing transitions, visibility across every lookup path, tags, comment permissions, vote creation/removal, and migration backfills.
+- [x] Test publishing transitions, lookup and vote visibility, migration backfills, and PostgreSQL concurrency.
+- [ ] Add integration tests for tags, comments, and vote creation/removal persistence.
 
 Acceptance criteria: public users can discover and interact only with published content; authors can manage their private content, tags, and comments; votes persist correctly; publishing changes preserve existing data and have automated coverage.
 

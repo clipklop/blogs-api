@@ -1,9 +1,5 @@
 # Voting correctness
 
-## Purpose
-
-Define voting correctness behavior for the Blogs API while preserving authorization, data integrity, and observable failure handling.
-
 ## ADDED Requirements
 
 ### Requirement: CONTENT-04 Vote removal persistence
@@ -23,12 +19,3 @@ The vote request SHALL NOT require user_id. Authentication SHALL supply identity
 
 - **WHEN** two requests by the same user race to create a vote for one post
 - **THEN** at most one row is stored and the conflicting request returns 409.
-
-### Requirement: CONTENT-04 Vote visibility
-
-Voting SHALL be allowed only on published posts visible to the caller.
-
-#### Scenario: Private target
-
-- **WHEN** a signed-in user attempts to vote on a draft or archived post
-- **THEN** the vote is not created and the response does not disclose private content.

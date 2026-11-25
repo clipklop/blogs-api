@@ -24,6 +24,6 @@ Implement Phase 3 requirement CONTENT-01 so authors can prepare and archive post
 
 ## Impact
 
-Updates post and vote routers, schemas, persistence, Alembic, OpenAPI, and tests. The existing [complete-voting](../complete-voting/proposal.md) change still owns removal persistence, request identity cleanup, and duplicate-race handling. Its visibility delta should be reconciled after publishing ships.
+Updates post and vote routers, schemas, persistence, Alembic, OpenAPI, and tests. The existing [complete-voting](../../complete-voting/proposal.md) change still owns removal persistence, request identity cleanup, and duplicate-race handling. Its visibility delta should be reconciled after publishing ships.
 
-Planning is ready for review. See [design.md](design.md) and [tasks.md](tasks.md).
+Publishing implementation is complete. See [design.md](design.md) and [tasks.md](tasks.md).

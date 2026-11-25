@@ -6,6 +6,7 @@ from blogs_api import models
 from blogs_api.schemas import VotePost
 from blogs_api.database import get_db
 from blogs_api.oauth2 import get_current_user
+from blogs_api.post_access import lock_post
 
 CurrentUser = Annotated[models.User, Depends(get_current_user)]
 
@@ -21,7 +22,7 @@ def vote(
     db: Session = Depends(get_db),
 ):
     """Cast a vote for a post."""
-    post = db.query(models.Post).filter(models.Post.id == vote.post_id).first()
+    post = lock_post(db, vote.post_id, published_only=True)
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {vote.post_id} doesn't exist")
     

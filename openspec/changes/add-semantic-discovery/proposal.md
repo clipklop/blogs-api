@@ -34,5 +34,5 @@ Status: **Draft**. This migrated proposal has no implementation task list yet.
 Resolve blocking contracts and design choices before producing tasks or code.
 
 - [add-ai-job-infrastructure](../add-ai-job-infrastructure/proposal.md)
-- [add-publishing-workflow](../add-publishing-workflow/proposal.md)
+- [Implemented publishing capability](../../specs/publishing/spec.md)
 - [add-ai-evaluation](../add-ai-evaluation/proposal.md)

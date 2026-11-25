@@ -1,22 +1,38 @@
-from typing import Optional
-from datetime import datetime
+from typing import Literal, Optional
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, model_validator
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
 
 
 # Schema for incoming requests
-class PostCreate(BaseModel):
+PostState = Literal["draft", "published", "archived"]
+
+
+class PostContent(BaseModel):
     title: str = Field(..., min_length=2, max_length=100, description="The title of the blog post")
     content: str = Field(..., max_length=1000, description="The content of the blog post")
-    published: bool = Field(False, description="Whether the blog post is published")
     rating: float = Field(0.0, ge=0.0, le=5.0, description="The rating of the blog post")
+
+
+class PostCreate(PostContent):
+    @model_validator(mode="before")
+    @classmethod
+    def reject_publication_fields(cls, data):
+        if isinstance(data, dict) and {"state", "published", "published_at"}.intersection(data):
+            raise ValueError("Publication fields cannot be supplied when creating a post")
+        return data
+
+
+class PostPublication(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: PostState
 
 class PostUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: Optional[str] = Field(default=None, min_length=2, max_length=100, description="The title of the blog post")
     content: Optional[str] = Field(default=None, max_length=1000, description="The content of the blog post")
-    published: Optional[bool] = Field(default=None, description="Whether the blog post is published")
     rating: Optional[float] = Field(default=None, ge=0.0, le=5.0, description="The rating of the blog post")
 
     @model_validator(mode="after")
@@ -40,7 +56,7 @@ class UserCreate(BaseModel):
     
 
 # Schema for outgoing responses
-class PostResponse(PostCreate):
+class PostResponse(PostContent):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -49,6 +65,17 @@ class PostResponse(PostCreate):
     owner: UserResponse
     created_at: datetime
     updated_at: datetime
+    state: PostState
+    published_at: datetime | None
+
+    @field_validator("published_at")
+    @classmethod
+    def normalize_publication_time(cls, value):
+        if value is None:
+            return None
+        if value.tzinfo is None:  # SQLite stores timestamps without a zone.
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
 
 class UserResponse(BaseModel): 
     model_config = ConfigDict(from_attributes=True)

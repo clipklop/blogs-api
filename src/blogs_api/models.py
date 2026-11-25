@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Integer, Text, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Integer, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from blogs_api.database import Base
@@ -8,12 +8,17 @@ from blogs_api.database import Base
 
 class Post(Base):
     __tablename__ = "posts"
+    __table_args__ = (
+        CheckConstraint("state IN ('draft', 'published', 'archived')", name="ck_posts_state"),
+        CheckConstraint("state <> 'published' OR published_at IS NOT NULL", name="ck_posts_publication_time"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(160), unique=True, index=True, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    published: Mapped[bool] = mapped_column(default=False)
+    state: Mapped[str] = mapped_column(String(9), server_default="draft")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rating: Mapped[float] = mapped_column(default=0.0)
     owner_id: Mapped[int] = mapped_column(
         Integer,

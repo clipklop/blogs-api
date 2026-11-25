@@ -2,8 +2,8 @@
 
 ## Status
 
-This design covers [capability specs and draft changes](../openspec/README.md). Phases 1–2 are implemented;
-Phases 3–6 are planned. OpenSpec change artifacts must settle API contracts, migration steps,
+This design covers [capability specs and draft changes](../openspec/README.md). Phases 1–2 and the Phase 3 publishing workflow are implemented.
+OpenSpec change artifacts must settle API contracts, migration steps,
 limits, and failure behavior before code changes. Proposed components below are
 not installed or implemented unless explicitly listed as current.
 
@@ -19,7 +19,7 @@ not installed or implemented unless explicitly listed as current.
 - oauth2.py issues UTC-expiring tokens and resolves an existing authenticated user;
   utils.py handles bcrypt. The /users/me route precedes the dynamic user-ID route.
 - Alembic owns schema evolution. Preserve this revision chain and append revisions:
-  18f430d2b901 → 3eecf97d0d4d → 7b40c5d184a2 → 92f615a3e807 → a10b62d839ef.
+  18f430d2b901 → 3eecf97d0d4d → 7b40c5d184a2 → 92f615a3e807 → a10b62d839ef → 61d07bfb923e.
 - Isolated SQLite tests build databases through Alembic. Authentication tests use
   real tokens, alongside focused dependency overrides in post tests.
 - Compose currently runs PostgreSQL and the API. There is no Redis, worker,
@@ -29,22 +29,22 @@ not installed or implemented unless explicitly listed as current.
 
 ### Shared visibility — CONTENT-01
 
-Use one reusable query policy for public, owner, and later moderator access.
-Apply it before pagination/counting and on direct/nested lookups. Public content
-must be published and, once moderation exists, not moderator-hidden. Owner scope
-must explicitly select the authenticated user; an author_id filter grants no
-private access. Numeric reads remain authenticated unless a OpenSpec change specification changes
-that contract.
+The post and vote routers share the publication policy in `post_access.py`.
+Public lists filter on published state before pagination. Owner lists require
+authentication and filter on the caller's ID. Numeric lookup requires a bearer
+token. Slug lookup accepts anonymous access to published posts and a bearer token
+for author access to private posts. Future nested routes should reuse this policy.
 
-Private reads by non-owners return 404 to avoid disclosing existence. Non-owner
-update/delete retains 403; unauthenticated protected operations retain 401.
-Specify nested-resource behavior and transition errors in the OpenSpec change specification.
+Non-owner reads and mutations of private posts return 404. A non-owner mutation
+of a published post returns 403. PostgreSQL post mutations and votes lock the post
+row so authorization and publication checks use the committed state.
 
-Migrate the boolean to a constrained draft/published/archived state, default draft.
-Add nullable published_at, backfilled from created_at for published rows, then
-set only on first publication. Define a transition table, including the destination
-of archive restoration, before code. Update filters, schemas, tests, and user
-documentation together.
+Revision `61d07bfb923e` backfills `state` and `published_at` from the prior flag
+and creation time. Downgrade maps archived and draft posts to unpublished and
+discards first-publication times. Older API versions expose unpublished posts, so
+keep the service offline during rollback or disable public access to affected
+routes until the data and routing are safe to expose. SQLite batch rebuilds detach
+and restore votes to avoid cascading deletions.
 
 ### Relationships and transactions — CONTENT-02 through CONTENT-04
 
