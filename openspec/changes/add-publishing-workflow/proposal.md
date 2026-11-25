@@ -2,41 +2,28 @@
 
 ## Why
 
-Deliver roadmap requirement CONTENT-01 from Phase 3 without presenting planned behavior as current functionality.
+Implement Phase 3 requirement CONTENT-01 so authors can prepare and archive posts privately and readers only discover published content.
 
 ## What Changes
 
-1. Replace published with draft/published/archived states; migrate true to published
-   and false to draft. Specify the filter/schema compatibility change.
-2. Public readers see only published content. Authors explicitly list their own
-   drafts/archives. Apply one visibility policy across lists, ID/slug lookups,
-   comments, votes, and later AI endpoints/caches.
-3. Authors can publish, unpublish, archive, and restore their own posts. The feature
-   spec must enumerate transitions and invalid-transition responses.
-4. Set published_at on first publication and preserve it on edits/republication.
-   Backfill existing published rows from created_at.
-5. Test anonymous, owner, and other-user access on every lookup path, all state
-   transitions, and migration backfills.
-
-**BREAKING**: Existing API, error, request, or authentication behavior may change; finalize compatibility in the design before implementation.
+- Create posts as drafts. Authors use a dedicated endpoint to publish, unpublish, archive, and restore posts.
+- Restrict listing, numeric lookup, slug lookup, and voting by publication state. Authors can explicitly list their own posts.
+- Record when a post was first published and backfill existing published posts.
+- **BREAKING**: Replace the `published` field and query parameter with state-aware contracts. Use the publication endpoint to change state. Private post reads and attempts to modify another author's private post return 404.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `publishing`: explicit post state transitions and publication timestamps.
+- `publishing`: state transitions, first publication time, and migration behavior.
 
 ### Modified Capabilities
 
-- `posts`: private draft/archive access and state-aware discovery.
+- `posts`: post schemas, state-aware discovery, and visibility.
+- `voting`: published-only targets on the existing vote endpoint.
 
 ## Impact
 
-See [design.md](design.md) and [architecture notes](../../../docs/architecture.md). No runtime change is included in this specification migration.
+Updates post and vote routers, schemas, persistence, Alembic, OpenAPI, and tests. The existing [complete-voting](../complete-voting/proposal.md) change still owns removal persistence, request identity cleanup, and duplicate-race handling. Its visibility delta should be reconciled after publishing ships.
 
-## Dependencies and Readiness
-
-Status: **Draft**. This migrated proposal has no implementation task list yet.
-Resolve blocking contracts and design choices before producing tasks or code.
-
-No prerequisite change is required for specification refinement.
+Planning is ready for review. See [design.md](design.md) and [tasks.md](tasks.md).
