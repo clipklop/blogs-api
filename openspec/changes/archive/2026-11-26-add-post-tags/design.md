@@ -9,7 +9,7 @@ CONTENT-02 builds on the [publishing contract](../../specs/publishing/spec.md) a
 - Use `PUT /posts/{post_id}/tags` for atomic replacement and return `{"tags":["fastapi","python"]}`. The body uses the same shape. An empty array clears assignments. Keep content and publication writes focused on their existing fields.
 - Accept up to ten raw names. Strip leading and trailing whitespace, require 1–32 ASCII letters, digits, or single hyphen separators, lowercase, then deduplicate and sort. Apply the same normalization to the single `tag` filter. Use `author_id` with the positive PostgreSQL integer range.
 - Reuse the author mutation check and post-row lock for writes. Add a tag table keyed by name and an association with a composite primary key, cascading foreign keys, and a tag-first index. Keep unused names for reuse. Use conflict-safe inserts in sorted name order on PostgreSQL and SQLite so concurrent posts can share newly created tags. Replace associations and commit within the same transaction.
-- Apply filters to the existing post query through an association existence predicate so each post still contributes one row. Load response tags with the post query through select-in loading. Preserve post timestamps for tag-only updates.
+- Apply filters to the existing post query through an association existence predicate so each post still contributes one row. Eager-load tags in the same query for list and lookup responses so they share the post visibility snapshot. Preserve post timestamps for tag-only updates.
 
 ## Migration plan
 

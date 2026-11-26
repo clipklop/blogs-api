@@ -37,7 +37,7 @@ Acceptance criteria: authenticated users can manage their own posts, while unaut
 - [x] Replace the `published` boolean with `draft`, `published`, and `archived` states; migrate existing values and update filtering, response schemas, and API documentation together.
 - [x] Define allowed publishing transitions: authors may publish, unpublish, archive, and restore their own posts; archived posts remain private to their author.
 - [x] Add `published_at`; backfill existing published posts from `created_at`, set it on first publication, and preserve it across later edits and republication.
-- [ ] Add tags with unique normalized names and a many-to-many relationship to posts; prevent duplicate assignments and support filtering by tag and author.
+- [x] Add tags with unique normalized names and a many-to-many relationship to posts; prevent duplicate assignments and support filtering by tag and author.
 - [ ] Add authenticated comments on published posts with paginated listing; allow commenters to edit or delete their own comments and post authors to delete comments on their posts.
 - [x] Restrict voting to published posts, including when the caller owns the draft or archive.
 - [ ] Enforce parent-post visibility when reading or writing comments.

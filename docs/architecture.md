@@ -2,7 +2,7 @@
 
 ## Status
 
-This design covers [capability specs and draft changes](../openspec/README.md). Phases 1–2 and the Phase 3 publishing workflow are implemented.
+This design covers [capability specs and draft changes](../openspec/README.md). Phases 1–2 and the Phase 3 publishing and tag features are implemented.
 OpenSpec change artifacts must settle API contracts, migration steps,
 limits, and failure behavior before code changes. Proposed components below are
 not installed or implemented unless explicitly listed as current.
@@ -14,16 +14,16 @@ not installed or implemented unless explicitly listed as current.
 - database.py uses synchronous SQLAlchemy sessions with psycopg; config.py owns
   settings. Connection/pool timeouts currently default to five seconds. A global
   async database conversion is not required for background AI work.
-- Models are Post, User, and Vote. Posts have stable slugs and required authors;
+- Models are Post, User, Vote, and Tag. Posts have stable slugs and required authors;
   votes have a composite user/post primary key.
 - oauth2.py issues UTC-expiring tokens and resolves an existing authenticated user;
   utils.py handles bcrypt. The /users/me route precedes the dynamic user-ID route.
 - Alembic owns schema evolution. Preserve this revision chain and append revisions:
-  18f430d2b901 → 3eecf97d0d4d → 7b40c5d184a2 → 92f615a3e807 → a10b62d839ef → 61d07bfb923e.
+  18f430d2b901 → 3eecf97d0d4d → 7b40c5d184a2 → 92f615a3e807 → a10b62d839ef → 61d07bfb923e → b67257fc1b08.
 - Isolated SQLite tests build databases through Alembic. Authentication tests use
   real tokens, alongside focused dependency overrides in post tests.
 - Compose currently runs PostgreSQL and the API. There is no Redis, worker,
-  pgvector, tag/comment model, refresh-session store, or AI adapter yet.
+  pgvector, comment model, refresh-session store, or AI adapter yet.
 
 ## Phase 3 — Content design
 
@@ -48,8 +48,10 @@ and restore votes to avoid cascading deletions.
 
 ### Relationships and transactions — CONTENT-02 through CONTENT-04
 
-Add Tag and a unique post/tag association; specify normalization, collision policy,
-and limits. Accepted tags remain relational, separate from AI suggestions.
+Revision `b67257fc1b08` adds Tag and a unique post/tag association. The author-only
+replacement endpoint updates associations in one transaction. Tags and author IDs
+filter discovery within the existing visibility scope. Downgrade discards tags
+and assignments while preserving posts, accounts, and votes.
 
 Add Comment with parent/author keys, body, and timestamps. Resolve parent visibility
 before access and distinguish commenter permissions from the post author's right

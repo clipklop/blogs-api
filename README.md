@@ -46,6 +46,8 @@ credentials return `401` on protected routes.
 | `scope` | `public` | `public` or `mine`. Use a bearer token for `mine`. |
 | `state` | All states visible in the chosen scope | `published` for public scope. `draft`, `published`, or `archived` for `mine`. |
 | `search` | No filter | Case-insensitive literal substring in title or content |
+| `tag` | No filter | Exact normalized tag name |
+| `author_id` | No filter | Author ID from `1` through `2147483647` |
 | `sort` | `newest` | `newest` or `oldest`, with ID as the timestamp tie-breaker |
 
 For example, `/posts/?scope=mine&state=draft&search=python` lists your matching drafts.
@@ -67,6 +69,13 @@ and a body such as `{"state":"published"}`. Authors can unpublish to draft or
 archive a draft or published post. Restore an archive to draft before publishing
 again. Responses include `state` and `published_at`, the UTC time of first
 publication, which stays the same on later edits and republication.
+
+Post responses include a sorted `tags` array. Authors can replace a post's tags
+with `PUT /posts/{post_id}/tags` and a body such as `{"tags":["Python","Fast-API"]}`.
+Send `{"tags":[]}` to clear them. The API accepts up to ten entries, trims whitespace,
+and lowercases and deduplicates names. Each trimmed name has 1–32 ASCII letters
+or digits, with single hyphens allowed between groups. The `tag` filter uses the
+same name rules and combines with the other filters before pagination.
 
 ## Tests
 

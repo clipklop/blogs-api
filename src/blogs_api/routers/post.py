@@ -3,14 +3,18 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, exists, func, insert, or_
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.orm import Session, joinedload
 
 from blogs_api import models
 from blogs_api.database import get_db
 from blogs_api.oauth2 import get_current_user, optional_oauth2_scheme, resolve_post_reader
 from blogs_api.post_access import lock_post, published_posts, readable_posts
-from blogs_api.schemas import PostCreate, PostPublication, PostResponse, PostState, PostUpdate, PostWithVotes
+from blogs_api.schemas import (
+    PostCreate, PostPublication, PostResponse, PostState, PostTags, PostUpdate, PostWithVotes, TagName,
+)
 from blogs_api.slugs import make_slug
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -24,7 +28,9 @@ def posts_with_votes(db: Session):
         models.Vote.post_id.label("post_id"),
         func.count().label("votes"),
     ).group_by(models.Vote.post_id).subquery()
-    return db.query(models.Post, func.coalesce(vote_counts.c.votes, 0)).outerjoin(
+    return db.query(models.Post, func.coalesce(vote_counts.c.votes, 0)).options(
+        joinedload(models.Post.tag_records)
+    ).outerjoin(
         vote_counts, vote_counts.c.post_id == models.Post.id
     )
 
@@ -54,6 +60,8 @@ def get_posts(
     state: PostState | None = None,
     search: Annotated[str | None, Query(min_length=1, max_length=1000)] = None,
     sort: Literal["newest", "oldest"] = "newest",
+    tag: Annotated[TagName | None, Query()] = None,
+    author_id: Annotated[int | None, Query(ge=1, le=2_147_483_647)] = None,
 ):
     query = posts_with_votes(db)
     if "published" in request.query_params:
@@ -78,6 +86,13 @@ def get_posts(
             models.Post.title.icontains(search, autoescape=True),
             models.Post.content.icontains(search, autoescape=True),
         ))
+    if tag is not None:
+        query = query.filter(exists().where(
+            models.post_tags.c.post_id == models.Post.id,
+            models.post_tags.c.tag_name == tag,
+        ))
+    if author_id is not None:
+        query = query.filter(models.Post.owner_id == author_id)
     order = (models.Post.created_at.asc(), models.Post.id.asc()) if sort == "oldest" else (
         models.Post.created_at.desc(), models.Post.id.desc()
     )
@@ -118,6 +133,25 @@ def update_post(post_id: int, post: PostUpdate, db: DbSession, current_user: Cur
     db.commit()
     db.refresh(db_post)
     return db_post
+
+
+@router.put("/{post_id}/tags", response_model=PostTags)
+def replace_post_tags(post_id: int, replacement: PostTags, db: DbSession, current_user: CurrentUser):
+    owned_post(post_id, db, current_user)
+    names = sorted(set(replacement.tags))
+    if names:
+        insert_tags = sqlite_insert if db.get_bind().dialect.name == "sqlite" else postgres_insert
+        statement = insert_tags(models.Tag).values([{"name": name} for name in names])
+        db.execute(statement.on_conflict_do_nothing(index_elements=[models.Tag.name]))
+
+    db.execute(delete(models.post_tags).where(models.post_tags.c.post_id == post_id))
+    if names:
+        db.execute(
+            insert(models.post_tags),
+            [{"post_id": post_id, "tag_name": name} for name in names],
+        )
+    db.commit()
+    return PostTags(tags=names)
 
 
 @router.put("/{post_id}/publication", response_model=PostResponse)

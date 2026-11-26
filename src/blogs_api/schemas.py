@@ -1,11 +1,32 @@
-from typing import Literal, Optional
+import re
+from typing import Annotated, Literal, Optional
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
+from pydantic import BeforeValidator, BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
 
 
 # Schema for incoming requests
 PostState = Literal["draft", "published", "archived"]
+
+
+def normalize_tag_name(value: str) -> str:
+    name = value.strip()
+    if len(name) > 32 or re.fullmatch(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", name) is None:
+        raise ValueError("Tag names must be 1 to 32 ASCII letters or digits with optional single hyphens")
+    return name.lower()
+
+
+def validate_tag_name(value: object) -> object:
+    return normalize_tag_name(value) if isinstance(value, str) else value
+
+
+TagName = Annotated[str, BeforeValidator(validate_tag_name), Field(strict=True)]
+
+
+class PostTags(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tags: list[TagName] = Field(max_length=10)
 
 
 class PostContent(BaseModel):
@@ -67,6 +88,7 @@ class PostResponse(PostContent):
     updated_at: datetime
     state: PostState
     published_at: datetime | None
+    tags: list[str]
 
     @field_validator("published_at")
     @classmethod
