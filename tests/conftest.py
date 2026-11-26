@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from uuid import uuid4
 
 # Tests must never connect to the database configured in the developer's .env.
 os.environ["DATABASE_URL"] = "sqlite://"
@@ -9,7 +10,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -24,6 +25,25 @@ def migrate(connection, revision="head"):
     config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
     config.attributes["connection"] = connection
     command.upgrade(config, revision)
+
+
+@pytest.fixture
+def postgres_engine():
+    url = os.environ.get("PUBLISHING_TEST_POSTGRES_URL")
+    if not url:
+        pytest.skip("Set PUBLISHING_TEST_POSTGRES_URL to a disposable PostgreSQL database")
+    admin = create_engine(url)
+    schema = f"publishing_test_{uuid4().hex}"
+    with admin.begin() as connection:
+        connection.execute(text(f"CREATE SCHEMA {schema}"))
+    engine = create_engine(url, connect_args={"options": f"-csearch_path={schema}"})
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+        with admin.begin() as connection:
+            connection.execute(text(f"DROP SCHEMA {schema} CASCADE"))
+        admin.dispose()
 
 
 @pytest.fixture

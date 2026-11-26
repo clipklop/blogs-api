@@ -115,8 +115,13 @@ def test_real_tokens_enforce_post_ownership(auth_client):
     assert post["owner_id"] == owner["id"]
     assert post["owner"] == owner
     url = f"/posts/{post['id']}"
+    assert auth_client.patch(url, headers=other_headers, json={"title": "Stolen"}).status_code == 404
+    assert auth_client.delete(url, headers=other_headers).status_code == 404
+    assert auth_client.put(f"{url}/publication", headers=other_headers, json={"state": "published"}).status_code == 404
+    assert auth_client.put(f"{url}/publication", headers=owner_headers, json={"state": "published"}).status_code == 200
     assert auth_client.patch(url, headers=other_headers, json={"title": "Stolen"}).status_code == 403
     assert auth_client.delete(url, headers=other_headers).status_code == 403
+    assert auth_client.put(f"{url}/publication", headers=other_headers, json={"state": "draft"}).status_code == 403
     assert auth_client.get(url, headers=owner_headers).json()["title"] == "Owned post"
     assert auth_client.patch(url, headers=owner_headers, json={"title": "Updated"}).status_code == 200
     response = auth_client.delete(url, headers=owner_headers)
@@ -130,6 +135,8 @@ def test_protected_routes_require_authentication(auth_client):
         ("post", "/posts/", {"json": {"title": "Post", "content": "Content"}}),
         ("patch", "/posts/1", {"json": {"title": "Updated"}}),
         ("delete", "/posts/1", {}),
+        ("put", "/posts/1/publication", {"json": {"state": "published"}}),
+        ("post", "/vote/", {"json": {"post_id": 1, "user_id": 1, "dir": 1}}),
     ]:
         response = getattr(auth_client, method)(url, **kwargs)
         assert response.status_code == 401
@@ -141,3 +148,41 @@ def test_disabled_legacy_account_cannot_login(auth_client, db):
     db.commit()
     response = auth_client.post("/login", data={"username": "legacy@example.com", "password": "!disabled"})
     assert response.status_code == 401
+
+
+def test_owner_scope_and_private_lookup(auth_client):
+    author, _ = register(auth_client)
+    other, _ = register(auth_client, "two")
+    author_token = login(auth_client, author)
+    other_token = login(auth_client, other)
+    draft = auth_client.post("/posts/", headers=author_token, json={"title": "Draft post", "content": "Draft"}).json()
+    archived = auth_client.post("/posts/", headers=author_token, json={"title": "Archived post", "content": "Archive"}).json()
+    assert auth_client.put(f"/posts/{archived['id']}/publication", headers=author_token, json={"state": "archived"}).status_code == 200
+    assert auth_client.get("/posts/", headers=author_token).json() == []
+    assert [post["id"] for post in auth_client.get("/posts/?scope=mine", headers=author_token).json()] == [archived["id"], draft["id"]]
+    assert auth_client.get("/posts/?scope=mine", headers=other_token).json() == []
+    for post in (draft, archived):
+        paths = (f"/posts/{post['id']}", f"/posts/slug/{post['slug']}")
+        hidden = {}
+        for url in paths:
+            assert auth_client.get(url, headers=author_token).status_code == 200
+            response = auth_client.get(url, headers=other_token)
+            assert response.status_code == 404
+            hidden[url] = response.json()
+        assert auth_client.get(f"/posts/slug/{post['slug']}").status_code == 404
+        assert auth_client.delete(paths[0], headers=author_token).status_code == 204
+        for url in paths:
+            response = auth_client.get(url, headers=other_token)
+            assert response.status_code == 404
+            assert response.json() == hidden[url]
+
+
+def test_optional_read_credentials(auth_client):
+    assert auth_client.get("/posts/?scope=mine").status_code == 401
+    for authorization in ("Basic invalid", "Bearer", "Bearer invalid"):
+        headers = {"Authorization": authorization}
+        assert auth_client.get("/posts/", headers=headers).status_code == 200
+        for path in ("/posts/?scope=mine", "/posts/slug/missing"):
+            response = auth_client.get(path, headers=headers)
+            assert response.status_code == 401
+            assert response.headers["www-authenticate"] == "Bearer"
