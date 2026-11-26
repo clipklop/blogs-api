@@ -2,33 +2,24 @@
 
 ## Why
 
-Deliver roadmap requirement CONTENT-02 from Phase 3 without presenting planned behavior as current functionality.
+Readers need to find published posts by topic and author. CONTENT-02 adds an accepted, reusable taxonomy managed through each author's posts.
 
 ## What Changes
 
-1. Store unique normalized tags in a many-to-many post/tag relationship and prevent
-   duplicate assignments. Define normalization and assignment limits in the feature spec.
-2. Add tag/author filters compatible with search, pagination, and sorting.
-3. Test normalization collisions, combined filters, and assignment permissions.
-   Later AI tag suggestions reference this accepted taxonomy.
+- Allow authors to replace a post's tags with normalized names.
+- Return tag names on post responses and filter discovery by exact tag and author ID.
+- Preserve existing post visibility, state transitions, and vote counts.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `tags`: post tags.
+- `tags` at `specs/tags/spec.md` defines tag assignment, permissions, and persistence.
 
 ### Modified Capabilities
 
-None at this draft stage; add full delta blocks for any existing contracts changed during refinement.
+- `posts` at `specs/posts/spec.md` adds tag representation and discovery filters.
 
 ## Impact
 
-See [design.md](design.md) and [architecture notes](../../../docs/architecture.md). No runtime change is included in this specification migration.
-
-## Dependencies and Readiness
-
-Status: **Draft**. This migrated proposal has no implementation task list yet.
-Resolve blocking contracts and design choices before producing tasks or code.
-
-- [Implemented publishing capability](../../specs/publishing/spec.md)
+The API adds one endpoint, two optional query parameters, and a response field. The migration adds two tables without backfilling tags. This depends on the [implemented publishing contract](../../specs/publishing/spec.md). The change is ready for implementation after the specification commit.
