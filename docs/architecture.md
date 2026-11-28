@@ -2,7 +2,7 @@
 
 ## Status
 
-This design covers [capability specs and draft changes](../openspec/README.md). Phases 1–2 and the Phase 3 publishing and tag features are implemented.
+This design covers [capability specs and draft changes](../openspec/README.md). Phases 1–2 and the Phase 3 publishing, tag, and comment features are implemented.
 OpenSpec change artifacts must settle API contracts, migration steps,
 limits, and failure behavior before code changes. Proposed components below are
 not installed or implemented unless explicitly listed as current.
@@ -10,34 +10,34 @@ not installed or implemented unless explicitly listed as current.
 ## Current architecture — BASE-01 through BASE-03
 
 - FastAPI wiring/CORS live in src/blogs_api/main.py. Focused routers already exist:
-  routers/post.py, user.py, auth.py, and vote.py.
+  routers/post.py, user.py, auth.py, vote.py, and comment.py.
 - database.py uses synchronous SQLAlchemy sessions with psycopg; config.py owns
   settings. Connection/pool timeouts currently default to five seconds. A global
   async database conversion is not required for background AI work.
-- Models are Post, User, Vote, and Tag. Posts have stable slugs and required authors;
+- Models are Post, User, Vote, Tag, and Comment. Posts have stable slugs and required authors;
   votes have a composite user/post primary key.
 - oauth2.py issues UTC-expiring tokens and resolves an existing authenticated user;
   utils.py handles bcrypt. The /users/me route precedes the dynamic user-ID route.
 - Alembic owns schema evolution. Preserve this revision chain and append revisions:
-  18f430d2b901 → 3eecf97d0d4d → 7b40c5d184a2 → 92f615a3e807 → a10b62d839ef → 61d07bfb923e → b67257fc1b08.
+  18f430d2b901 → 3eecf97d0d4d → 7b40c5d184a2 → 92f615a3e807 → a10b62d839ef → 61d07bfb923e → b67257fc1b08 → 4fb28f5dcb13.
 - Isolated SQLite tests build databases through Alembic. Authentication tests use
   real tokens, alongside focused dependency overrides in post tests.
 - Compose currently runs PostgreSQL and the API. There is no Redis, worker,
-  pgvector, comment model, refresh-session store, or AI adapter yet.
+  pgvector, refresh-session store, or AI adapter yet.
 
 ## Phase 3 — Content design
 
 ### Shared visibility — CONTENT-01
 
-The post and vote routers share the publication policy in `post_access.py`.
+The post, vote, and comment routers share the publication policy in `post_access.py`.
 Public lists filter on published state before pagination. Owner lists require
 authentication and filter on the caller's ID. Numeric lookup requires a bearer
 token. Slug lookup accepts anonymous access to published posts and a bearer token
-for author access to private posts. Future nested routes should reuse this policy.
+for author access to private posts. Comment listing uses the same visibility policy.
 
 Non-owner reads and mutations of private posts return 404. A non-owner mutation
-of a published post returns 403. PostgreSQL post mutations and votes lock the post
-row so authorization and publication checks use the committed state.
+of a published post returns 403. PostgreSQL post, vote, and comment mutations lock
+the post row so authorization and publication checks use the committed state.
 
 Revision `61d07bfb923e` backfills `state` and `published_at` from the prior flag
 and creation time. Downgrade maps archived and draft posts to unpublished and
@@ -53,9 +53,11 @@ replacement endpoint updates associations in one transaction. Tags and author ID
 filter discovery within the existing visibility scope. Downgrade discards tags
 and assignments while preserving posts, accounts, and votes.
 
-Add Comment with parent/author keys, body, and timestamps. Resolve parent visibility
-before access and distinguish commenter permissions from the post author's right
-to delete. Specify deletion/retention with migration tests.
+Revision `4fb28f5dcb13` adds Comment with parent and author keys, a body, and timestamps.
+Listing retrieves the visible parent and its page in a single query. A mutation checks
+parent visibility before checking comment ownership. The post author can delete
+another user's comment on their post. Deleting a post or account cascades to its
+comments. Downgrade drops comment data while preserving existing content and votes.
 
 Keep the vote composite primary key as the race-safe final uniqueness guard.
 Derive voter identity from authentication, commit removals, translate duplicate

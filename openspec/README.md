@@ -25,11 +25,13 @@ This repository uses OpenSpec's `spec-driven` schema. Read
 | Users and authentication | BASE-03 | [spec](specs/user-auth/spec.md) |
 | Publishing | CONTENT-01 | [spec](specs/publishing/spec.md) |
 | Post tags | CONTENT-02 | [spec](specs/tags/spec.md) |
+| Post comments | CONTENT-03 | [spec](specs/comments/spec.md) |
 | Voting | Existing voting baseline and CONTENT-01 visibility | [spec](specs/voting/spec.md) |
 
 Public post discovery and voting require published content. Authors can read their own
 private posts. See the [publishing archive](changes/archive/2026-11-25-add-publishing-workflow/proposal.md) for the implementation change.
 The [post tags archive](changes/archive/2026-11-26-add-post-tags/proposal.md) records assignment and discovery behavior.
+The [post comments archive](changes/archive/2026-11-28-add-post-comments/proposal.md) records nested visibility, moderation, and retention.
 Known vote-removal and concurrent-creation gaps are recorded explicitly.
 
 ## Draft change inventory
@@ -42,7 +44,6 @@ smaller independently reviewable changes during refinement.
 
 | Phase | Requirement ID | Change |
 | --- | --- | --- |
-| 3 | CONTENT-03 | [Post comments](changes/add-post-comments/proposal.md) |
 | 3 | CONTENT-04 | [Voting correctness](changes/complete-voting/proposal.md) |
 | 4 | OPS-01 | [API diagnostics](changes/add-api-diagnostics/proposal.md) |
 | 4 | OPS-02 | [Runtime health and configuration](changes/harden-service-runtime/proposal.md) |

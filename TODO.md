@@ -38,9 +38,9 @@ Acceptance criteria: authenticated users can manage their own posts, while unaut
 - [x] Define allowed publishing transitions: authors may publish, unpublish, archive, and restore their own posts; archived posts remain private to their author.
 - [x] Add `published_at`; backfill existing published posts from `created_at`, set it on first publication, and preserve it across later edits and republication.
 - [x] Add tags with unique normalized names and a many-to-many relationship to posts; prevent duplicate assignments and support filtering by tag and author.
-- [ ] Add authenticated comments on published posts with paginated listing; allow commenters to edit or delete their own comments and post authors to delete comments on their posts.
+- [x] Add authenticated comments on published posts with paginated listing; allow commenters to edit or delete their own comments and post authors to delete comments on their posts.
 - [x] Restrict voting to published posts, including when the caller owns the draft or archive.
-- [ ] Enforce parent-post visibility when reading or writing comments.
+- [x] Enforce parent-post visibility when reading or writing comments.
 - [ ] Complete voting behavior: commit vote removals, remove the client-supplied `user_id`, and handle concurrent duplicate votes without an unhandled database error.
 - [x] Test publishing transitions, lookup and vote visibility, migration backfills, and PostgreSQL concurrency.
 - [ ] Add integration tests for tags, comments, and vote creation/removal persistence.
