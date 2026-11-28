@@ -2,34 +2,24 @@
 
 ## Why
 
-Deliver roadmap requirement CONTENT-03 from Phase 3 without presenting planned behavior as current functionality.
+CONTENT-03 gives readers a way to discuss published posts and authors a way to remove comments from their own posts.
 
 ## What Changes
 
-1. Authenticated users can comment on published posts. Paginated reads respect
-   parent visibility.
-2. Commenters can edit/delete their own comments; post authors can delete comments
-   on their posts, but cannot rewrite another user's comment.
-3. Specify body limits, ordering, deletion/cascade behavior, errors, and tests for
-   ownership and hidden/missing parents before implementation.
+- Add a nested endpoint for listing and creating comments.
+- Let commenters edit and delete their own comments and post authors delete comments on their posts.
+- Apply parent visibility to every comment operation and preserve comments across publication transitions.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `comments`: post comments.
+- `comments` at `specs/comments/spec.md` defines comment creation, reads, mutations, and retention.
 
 ### Modified Capabilities
 
-None at this draft stage; add full delta blocks for any existing contracts changed during refinement.
+None.
 
 ## Impact
 
-See [design.md](design.md) and [architecture notes](../../../docs/architecture.md). No runtime change is included in this specification migration.
-
-## Dependencies and Readiness
-
-Status: **Draft**. This migrated proposal has no implementation task list yet.
-Resolve blocking contracts and design choices before producing tasks or code.
-
-- [Implemented publishing capability](../../specs/publishing/spec.md)
+The API gains nested routes with no changes to existing responses. An additive Alembic revision creates the comments table. This change depends on the [publishing visibility policy](../../specs/publishing/spec.md) and follows the verified tags migration.
