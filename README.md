@@ -3,6 +3,8 @@
 A FastAPI service for blog posts, user accounts, and voting, backed by SQLAlchemy
 and PostgreSQL. Database schema changes are managed with Alembic.
 
+Local development requires Python 3.14 or later. The Docker image uses Python 3.14.
+
 ## Database migrations
 
 Set `DATABASE_URL`, then apply all pending migrations before starting the API:
