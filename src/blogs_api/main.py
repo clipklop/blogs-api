@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from blogs_api.database import get_db
 from blogs_api.routers import (
+    comment,
     post,
     user,
     auth,
@@ -41,6 +42,7 @@ def read_db_health(db: Session = Depends(get_db)):
         return {"status": "unhealthy", "error": str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR
 
 app.include_router(post.router)
+app.include_router(comment.router)
 app.include_router(user.router)
 app.include_router(auth.router)
 app.include_router(vote.router)

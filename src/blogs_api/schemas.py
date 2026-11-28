@@ -29,6 +29,39 @@ class PostTags(BaseModel):
     tags: list[TagName] = Field(max_length=10)
 
 
+class CommentBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    body: str = Field(strict=True, min_length=1, max_length=1000)
+
+    @field_validator("body", mode="before")
+    @classmethod
+    def clean_body(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = value.strip()
+            if "\0" in value or any(0xD800 <= ord(char) <= 0xDFFF for char in value):
+                raise ValueError("Comment body must contain valid Unicode text without null characters")
+        return value
+
+
+class CommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    post_id: int
+    author_id: int
+    body: str
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def normalize_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+
 class PostContent(BaseModel):
     title: str = Field(..., min_length=2, max_length=100, description="The title of the blog post")
     content: str = Field(..., max_length=1000, description="The content of the blog post")

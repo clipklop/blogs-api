@@ -79,6 +79,23 @@ and lowercases and deduplicates names. Each trimmed name has 1–32 ASCII letter
 or digits, with single hyphens allowed between groups. The `tag` filter uses the
 same name rules and combines with the other filters before pagination.
 
+## Comments
+
+`GET /posts/{post_id}/comments` lists comments newest first, using the comment ID
+to break timestamp ties. It accepts `limit` from 1 through 100 (default 20) and
+`offset` from 0 through 2147483647 (default 0). Published discussions are public.
+Only the post author can read the discussion while a post is draft or archived.
+
+Use a bearer token and `POST /posts/{post_id}/comments` with
+`{"body":"Example comment"}` to comment on a published post. Commenters can edit
+their own comment with the same body by sending PATCH to
+`/posts/{post_id}/comments/{comment_id}`. Comment bodies accept 1–1000 characters
+after trimming. Commenters and post authors can DELETE on that path when they
+can read the parent post. A successful deletion returns an empty `204` response.
+
+Comments stay attached across publication transitions. Deleting a post or a
+commenter's account deletes the associated comments.
+
 ## Tests
 
 ```shell
@@ -89,4 +106,4 @@ Tests use isolated SQLite databases built through Alembic and do not connect to 
 database in `.env`. They cover post behavior, validation, database constraints,
 authentication, ownership enforcement with real tokens, and migration upgrades,
 backfills, and downgrades. Set `PUBLISHING_TEST_POSTGRES_URL` to a disposable
-PostgreSQL database to include PostgreSQL migration and row-lock concurrency tests.
+PostgreSQL database to include PostgreSQL comment API, migration, and concurrency tests.

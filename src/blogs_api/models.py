@@ -75,6 +75,22 @@ class User(Base):
         onupdate=func.now(),
     )
 
+class Comment(Base):
+    __tablename__ = "comments"
+    __table_args__ = (
+        CheckConstraint("length(body) BETWEEN 1 AND 1000", name="ck_comments_body_length"),
+        Index("ix_comments_post_order", "post_id", "created_at", "id"),
+        Index("ix_comments_author_id", "author_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"))
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Vote(Base):
     __tablename__ = "votes"
 

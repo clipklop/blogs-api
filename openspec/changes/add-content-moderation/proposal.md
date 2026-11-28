@@ -31,5 +31,5 @@ See [design.md](design.md) and [architecture notes](../../../docs/architecture.m
 Status: **Draft**. This migrated proposal has no implementation task list yet.
 Resolve blocking contracts and design choices before producing tasks or code.
 
-- [add-post-comments](../add-post-comments/proposal.md)
+- [Implemented comments capability](../../specs/comments/spec.md)
 - [Implemented publishing capability](../../specs/publishing/spec.md)

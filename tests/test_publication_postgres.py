@@ -9,14 +9,16 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from blogs_api import models
+from blogs_api.routers.comment import create_comment
 from blogs_api.routers.post import set_publication
 from blogs_api.routers.vote import vote
-from blogs_api.schemas import PostPublication, VotePost
+from blogs_api.schemas import CommentBody, PostPublication, VotePost
 from conftest import migrate
 
 
-@pytest.mark.parametrize("competing_vote", [False, True], ids=["archive-publish", "unpublish-vote"])
-def test_waiting_request_evaluates_committed_post_state(postgres_engine, competing_vote):
+@pytest.mark.parametrize("operation", ["publish", "vote", "comment"])
+def test_waiting_request_evaluates_committed_post_state(postgres_engine, operation):
+    starts_published = operation != "publish"
     with postgres_engine.begin() as connection:
         migrate(connection)
     with Session(postgres_engine) as db:
@@ -24,8 +26,8 @@ def test_waiting_request_evaluates_committed_post_state(postgres_engine, competi
         db.flush()
         db.add(models.Post(
             id=1, owner_id=1, title="Post", slug="post", content="Text",
-            state="published" if competing_vote else "draft",
-            published_at=datetime.now(timezone.utc) if competing_vote else None,
+            state="published" if starts_published else "draft",
+            published_at=datetime.now(timezone.utc) if starts_published else None,
         ))
         db.commit()
 
@@ -36,11 +38,13 @@ def test_waiting_request_evaluates_committed_post_state(postgres_engine, competi
             db.execute(text("SET LOCAL lock_timeout = '10s'"))
             waiting_pid.put(db.scalar(text("SELECT pg_backend_pid()")))
             user = db.get(models.User, 1)
-            if competing_vote:
+            if operation == "vote":
                 return vote(VotePost(post_id=1, user_id=1, dir=1), user, db)
+            if operation == "comment":
+                return create_comment(1, CommentBody(body="Comment"), db, user)
             return set_publication(1, PostPublication(state="published"), db, user)
 
-    target = "draft" if competing_vote else "archived"
+    target = "draft" if starts_published else "archived"
     with ThreadPoolExecutor(max_workers=1) as pool, postgres_engine.connect() as connection:
         with connection.begin():
             with Session(bind=connection, join_transaction_mode="create_savepoint") as db:
@@ -58,7 +62,8 @@ def test_waiting_request_evaluates_committed_post_state(postgres_engine, competi
                 pytest.fail("Expected the competing operation to wait on the post lock")
         with pytest.raises(HTTPException) as error:
             future.result(timeout=10)
-        assert error.value.status_code == (404 if competing_vote else 409)
+        assert error.value.status_code == (404 if starts_published else 409)
         with Session(postgres_engine) as db:
             assert db.get(models.Post, 1).state == target
             assert db.get(models.Vote, (1, 1)) is None
+            assert db.query(models.Comment).count() == 0
